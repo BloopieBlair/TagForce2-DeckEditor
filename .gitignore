@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Proprietary game archives & extracted assets (never commit)
+*.ehp
+*_extracted/
+
+# PSP save files, backups & local runtime exports
+DATA0
+DATA0*.bak
+*.bak
+*.tmp
+*.sav
+player_deck.json
+decklist.md
+
+# Local optional artwork & metadata caches
+cache/
+card_images/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo

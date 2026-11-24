@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duelist Hub — Yu-Gi-Oh! GX Tag Force 2 Deck Editor</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="glow-bg" aria-hidden="true"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="brand">
+                    <span class="logo"><span class="logo-accent">DUELIST</span> HUB</span>
+                    <span class="title-sub">TAG FORCE 2 DECK EDITOR</span>
+                </div>
+                <button type="button" class="status-pill status-loading" id="status-pill" title="Connection & save file status">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span id="status-pill-text">Connecting...</span>
+                </button>
+            </div>
+
+            <nav class="header-actions" aria-label="Workspace tools">
+                <button type="button" class="btn btn-ghost" id="btn-open-analytics" title="Deck analytics & 5-card opening hand simulator">
+                    <svg class="btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 16h14M5 13V9m5 4V5m5 8v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    <span>Analytics &amp; Hand</span>
+                </button>
+                <button type="button" class="btn btn-ghost" id="btn-open-io" title="Import or export .ydk and .json decklists">
+                    <svg class="btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v9m0 0-3-3m3 3 3-3M4 14v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Import / Export</span>
+                </button>
+                <button type="button" class="btn btn-ghost" id="btn-open-save-mgr" title="Upload DATA0, download patched save, or restore backups">
+                    <svg class="btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h6l4 4v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 3v4h5V3M7 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    <span>Save File</span>
+                </button>
+                <button type="button" class="btn btn-icon-only" id="btn-open-settings" title="Settings, local artwork cache & keyboard shortcuts" aria-label="Settings">
+                    <svg class="btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="2.8" stroke="currentColor" stroke-width="1.7"/><path d="M10 2.5v2m0 11v2m7.5-7.5h-2m-11 0h-2m12.8-5.3-1.4 1.4m-7.8 7.8-1.4 1.4m10.6 0-1.4-1.4M6.1 6.1 4.7 4.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                </button>
+            </nav>
+        </header>
+
+        <!-- Encrypted Save Warning Banner (shown only when backend detects encrypted DATA0) -->
+        <div class="alert-banner alert-danger" id="encrypted-banner" role="alert" hidden>
+            <div class="alert-banner-content">
+                <strong>Encrypted PSP Save Detected:</strong>
+                <span>PPSSPP encrypted your <code>DATA0</code> file. In PPSSPP go to <em>Settings &rarr; System &rarr; Developer tools &rarr; Encrypt savedata: OFF</em>, re-save in-game, then upload or reload. Demo Mode is active in the meantime.</span>
+            </div>
+            <button type="button" class="btn btn-xs btn-ghost" id="btn-dismiss-encrypted" aria-label="Dismiss warning">Dismiss</button>
+        </div>
+
+        <!-- Main Three-Column Workspace -->
+        <div class="editor-layout">
+            <!-- Left Column: Card Inspector -->
+            <aside class="column card-details-column" aria-label="Card inspector">
+                <div class="panel detail-panel" id="detail-panel">
+                    <div class="panel-header">
+                        <h3>CARD INSPECTOR</h3>
+                        <button type="button" class="pin-badge" id="pin-badge" title="Click a card to pin it in the inspector" aria-pressed="false">
+                            <span id="pin-badge-text">Hover preview</span>
+                        </button>
+                    </div>
+
+                    <div class="card-detail-content" id="card-detail-content">
+                        <!-- Procedural + Optional Local Art Preview -->
+                        <div class="inspector-stage" id="inspector-stage">
+                            <div class="inspector-empty" id="inspector-empty">
+                                <svg class="empty-emblem" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                                    <rect x="9" y="5" width="30" height="38" rx="4" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"/>
+                                    <polygon points="24,14 31,24 24,34 17,24" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                <span>Hover a card to preview<br>Click any card to pin</span>
+                            </div>
+                            <div id="inspector-card-host" class="inspector-card-host" hidden></div>
+                        </div>
+
+                        <!-- Structured Metadata & Quick Actions -->
+                        <div class="card-details-info" id="card-details-info" hidden>
+                            <div class="inspector-quick-actions" id="inspector-quick-actions">
+                                <button type="button" class="btn btn-xs btn-add-primary" id="btn-inspector-add-main">+ Main</button>
+                                <button type="button" class="btn btn-xs btn-add-side" id="btn-inspector-add-side">+ Side</button>
+                                <span class="inspector-copy-count" id="inspector-copy-count">0 / 3 in deck</span>
+                            </div>
+
+                            <div class="badge-row" id="detail-badges">
+                                <span class="badge" id="detail-frame">Effect</span>
+                                <span class="badge" id="detail-race">Machine</span>
+                                <span class="badge" id="detail-attribute">LIGHT</span>
+                                <span class="badge" id="detail-level">&#9733; 5</span>
+                                <span class="badge badge-anime" id="detail-anime" hidden>ANIME ONLY</span>
+                            </div>
+
+                            <div class="stats-row" id="detail-stats">
+                                <div class="stat-pill">
+                                    <span class="stat-label">ATK</span>
+                                    <strong id="detail-atk">2100</strong>
+                                </div>
+                                <div class="stat-pill">
+                                    <span class="stat-label">DEF</span>
+                                    <strong id="detail-def">1600</strong>
+                                </div>
+                            </div>
+
+                            <div class="card-desc-box">
+                                <p class="card-desc" id="detail-desc"></p>
+                                <button type="button" class="sync-hint-link" id="btn-desc-sync-hint" hidden>
+                                    Sync full card effect text locally in Settings &rarr;
+                                </button>
+                            </div>
+
+                            <div class="passcode-row">
+                                <span>Passcode: <code id="detail-passcode">00000000</code></span>
+                                <span>ID: <code id="detail-game-index">#0</code></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Middle Column: Deck Editor -->
+            <main class="column deck-editor-column" aria-label="Deck editor">
+                <!-- Controls Panel -->
+                <div class="panel controls-panel">
+                    <div class="deck-title-area">
+                        <label for="deck-name-input">Deck</label>
+                        <input type="text" id="deck-name-input" value="" placeholder="Enter deck name..." maxlength="30" autocomplete="off">
+                    </div>
+                    <div class="button-bar" role="toolbar" aria-label="Deck actions">
+                        <button type="button" class="btn btn-save" id="btn-save" title="Save deck (Ctrl+S)">
+                            <span class="dirty-dot" id="dirty-dot" hidden aria-label="Unsaved changes"></span>
+                            <span id="btn-save-label">Save</span>
+                        </button>
+                        <button type="button" class="btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled>Undo</button>
+                        <button type="button" class="btn" id="btn-redo" title="Redo (Ctrl+Y)" disabled>Redo</button>
+                        <button type="button" class="btn" id="btn-sort" title="Sort Main, Extra, and Side decks">Sort</button>
+                        <button type="button" class="btn" id="btn-shuffle" title="Shuffle Main Deck">Shuffle</button>
+                        <button type="button" class="btn btn-clear" id="btn-clear" title="Clear all cards from deck">Clear</button>
+                    </div>
+                </div>
+
+                <!-- Compact Deck Summary & Quick Analytics Bar -->
+                <div class="deck-summary-strip" aria-label="Deck breakdown">
+                    <div class="summary-jump-group">
+                        <button type="button" class="jump-pill" data-jump="main-deck-section">
+                            Main <strong id="summary-main">0</strong><span class="limit-hint">/40-60</span>
+                        </button>
+                        <button type="button" class="jump-pill" data-jump="extra-deck-section">
+                            Extra <strong id="summary-extra">0</strong>
+                        </button>
+                        <button type="button" class="jump-pill" data-jump="side-deck-section">
+                            Side <strong id="summary-side">0</strong><span class="limit-hint">/15</span>
+                        </button>
+                    </div>
+
+                    <div class="summary-type-pills" aria-label="Card category counts">
+                        <span class="mini-pill frame-normal" title="Normal Monsters">Norm <b id="cnt-normal">0</b></span>
+                        <span class="mini-pill frame-effect" title="Effect Monsters">Eff <b id="cnt-effect">0</b></span>
+                        <span class="mini-pill frame-fusion" title="Fusion Monsters (Extra Deck)">Fus <b id="cnt-fusion">0</b></span>
+                        <span class="mini-pill frame-ritual" title="Ritual Monsters">Rit <b id="cnt-ritual">0</b></span>
+                        <span class="mini-pill frame-spell" title="Spell Cards">Spell <b id="cnt-spell">0</b></span>
+                        <span class="mini-pill frame-trap" title="Trap Cards">Trap <b id="cnt-trap">0</b></span>
+                    </div>
+
+                    <button type="button" class="btn btn-xs btn-hand-quick" id="btn-quick-hand" title="Draw a 5-card test opening hand">
+                        Test Hand
+                    </button>
+                </div>
+
+                <!-- Scrollable Deck Grids -->
+                <div class="deck-workspace-scroll" id="deck-workspace-scroll">
+                    <!-- Main Deck -->
+                    <section class="deck-section" id="main-deck-section" aria-labelledby="heading-main">
+                        <div class="section-title-bar">
+                            <h3 id="heading-main">
+                                MAIN DECK
+                                <span class="counter" id="count-main">0</span>
+                                <span class="validity-badge" id="main-validity-badge">40-60 recommended</span>
+                            </h3>
+                            <div class="deck-hint">Click to inspect &middot; Right-click or &times; to remove</div>
+                        </div>
+                        <div class="cards-grid editor-grid" id="main-deck-grid" role="list"></div>
+                    </section>
+
+                    <!-- Extra Deck -->
+                    <section class="deck-section" id="extra-deck-section" aria-labelledby="heading-extra">
+                        <div class="section-title-bar">
+                            <h3 id="heading-extra">
+                                EXTRA DECK <span class="counter" id="count-extra">0</span>
+                                <span class="section-sub-note">Fusion Monsters (max 30)</span>
+                            </h3>
+                        </div>
+                        <div class="cards-grid editor-grid" id="extra-deck-grid" role="list"></div>
+                    </section>
+
+                    <!-- Side Deck -->
+                    <section class="deck-section" id="side-deck-section" aria-labelledby="heading-side">
+                        <div class="section-title-bar">
+                            <h3 id="heading-side">
+                                SIDE DECK <span class="counter" id="count-side">0</span>
+                                <span class="section-sub-note">Max 15</span>
+                            </h3>
+                        </div>
+                        <div class="cards-grid editor-grid" id="side-deck-grid" role="list"></div>
+                    </section>
+                </div>
+            </main>
+
+            <!-- Right Column: Card Search Database -->
+            <aside class="column search-database-column" aria-label="Card database search">
+                <div class="panel search-panel">
+                    <div class="panel-header">
+                        <h3>CARD DATABASE</h3>
+                        <span class="match-count" id="search-match-count">Loading...</span>
+                    </div>
+
+                    <div class="search-controls">
+                        <div class="search-input-wrap">
+                            <input type="text" id="search-input" placeholder="Search name, race, passcode, text..." autocomplete="off" aria-label="Search cards">
+                            <span class="kbd-hint" id="search-kbd-hint" aria-hidden="true">/</span>
+                            <button type="button" class="search-clear-btn" id="btn-search-clear" hidden aria-label="Clear search">&times;</button>
+                        </div>
+
+                        <div class="filter-row">
+                            <select id="filter-frame" aria-label="Filter by card frame">
+                                <option value="all">All Frames</option>
+                                <option value="normal">Normal Monster</option>
+                                <option value="effect">Effect Monster</option>
+                                <option value="fusion">Fusion Monster</option>
+                                <option value="ritual">Ritual Monster</option>
+                                <option value="spell">Spell Card</option>
+                                <option value="trap">Trap Card</option>
+                                <option value="anime">Anime Only</option>
+                            </select>
+
+                            <select id="filter-attribute" aria-label="Filter by attribute">
+                                <option value="all">All Attrs</option>
+                                <option value="LIGHT">LIGHT</option>
+                                <option value="DARK">DARK</option>
+                                <option value="EARTH">EARTH</option>
+                                <option value="WATER">WATER</option>
+                                <option value="FIRE">FIRE</option>
+                                <option value="WIND">WIND</option>
+                                <option value="DIVINE">DIVINE</option>
+                            </select>
+
+                            <select id="sort-results" aria-label="Sort search results">
+                                <option value="name">Name A-Z</option>
+                                <option value="atk">ATK &darr;</option>
+                                <option value="def">DEF &darr;</option>
+                                <option value="level">Level &darr;</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="search-results-container" id="search-results-container">
+                        <div class="results-list" id="database-grid" role="list"></div>
+                    </div>
+
+                    <div class="pagination" id="pagination" hidden>
+                        <button type="button" class="btn btn-xs" id="btn-page-prev">Prev</button>
+                        <span id="page-num">Page 1 of 1</span>
+                        <button type="button" class="btn btn-xs" id="btn-page-next">Next</button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Toast Notification Stack -->
+    <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- Modal: Deck Analytics & Opening Hand Simulator -->
+    <div class="modal-backdrop" id="modal-analytics" role="dialog" aria-modal="true" aria-labelledby="modal-analytics-title" hidden>
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <h2 id="modal-analytics-title">Deck Analytics &amp; Opening Hand Simulator</h2>
+                <button type="button" class="modal-close" data-close-modal="modal-analytics" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h4>Category Breakdown</h4>
+                        <div class="bar-chart" id="analytics-categories"></div>
+                    </div>
+                    <div class="analytics-card">
+                        <h4>Monster Level Curve</h4>
+                        <div class="bar-chart" id="analytics-levels"></div>
+                        <div class="avg-stats-row" id="analytics-avg-stats"></div>
+                    </div>
+                    <div class="analytics-card analytics-card-wide">
+                        <h4>Attributes &amp; Races</h4>
+                        <div class="chip-cloud" id="analytics-attributes"></div>
+                    </div>
+                </div>
+
+                <div class="hand-sim-section">
+                    <div class="hand-sim-header">
+                        <div>
+                            <h4>5-Card Opening Hand Simulator</h4>
+                            <p class="muted-note" id="hand-sim-summary">Test opening draws from your current Main Deck.</p>
+                        </div>
+                        <div class="hand-sim-controls">
+                            <button type="button" class="btn btn-save btn-xs" id="btn-draw-new-hand">Draw New 5</button>
+                            <button type="button" class="btn btn-xs" id="btn-draw-extra">+1 Draw</button>
+                        </div>
+                    </div>
+                    <div class="hand-sim-cards" id="hand-sim-cards"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Import / Export -->
+    <div class="modal-backdrop" id="modal-io" role="dialog" aria-modal="true" aria-labelledby="modal-io-title" hidden>
+        <div class="modal-dialog modal-md">
+            <div class="modal-header">
+                <h2 id="modal-io-title">Import &amp; Export Decklist</h2>
+                <button type="button" class="modal-close" data-close-modal="modal-io" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="io-section">
+                    <h4>Export Current Deck</h4>
+                    <div class="io-actions">
+                        <button type="button" class="btn btn-save" id="btn-export-ydk">Download .YDK</button>
+                        <button type="button" class="btn" id="btn-export-json">Download .JSON</button>
+                        <button type="button" class="btn" id="btn-copy-text">Copy Text Decklist</button>
+                    </div>
+                    <p class="muted-note">YDK files use official 8-digit card passcodes (compatible with EDOPro / YGOPro). Anime-only cards without passcodes are listed as comments.</p>
+                </div>
+
+                <div class="io-section">
+                    <h4>Import from File (.ydk or .json)</h4>
+                    <div class="file-drop-row">
+                        <input type="file" id="import-file-input" accept=".ydk,.json,.txt">
+                    </div>
+                </div>
+
+                <div class="io-section">
+                    <h4>Or Paste .YDK / .JSON Directly</h4>
+                    <textarea id="import-paste-area" rows="6" placeholder="#main&#10;70095154&#10;...&#10;#extra&#10;01546123&#10;!side"></textarea>
+                    <div class="modal-footer-inline">
+                        <button type="button" class="btn btn-save" id="btn-import-paste">Import Decklist</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: PSP Save Manager -->
+    <div class="modal-backdrop" id="modal-save-mgr" role="dialog" aria-modal="true" aria-labelledby="modal-save-mgr-title" hidden>
+        <div class="modal-dialog modal-md">
+            <div class="modal-header">
+                <h2 id="modal-save-mgr-title">PSP Save File Manager (DATA0)</h2>
+                <button type="button" class="modal-close" data-close-modal="modal-save-mgr" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="save-info-box" id="save-info-box"></div>
+
+                <div class="io-section">
+                    <h4>Upload Decrypted DATA0</h4>
+                    <p class="muted-note">Upload a decrypted PPSSPP <code>DATA0</code> file (EU <code>ULES00925</code> or US <code>ULUS10287</code>) to edit in your browser and download the patched file.</p>
+                    <div class="io-actions">
+                        <input type="file" id="upload-save-input">
+                        <button type="button" class="btn btn-save" id="btn-download-save" disabled>Download Patched DATA0</button>
+                    </div>
+                </div>
+
+                <div class="io-section">
+                    <h4>Backups</h4>
+                    <p class="muted-note">Before every write, an immutable <code>DATA0.original.bak</code> and timestamped rolling backups (up to 10) are preserved.</p>
+                    <div class="backup-list" id="backup-list">
+                        <div class="muted-note">No backups available in current mode.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Settings & Shortcuts -->
+    <div class="modal-backdrop" id="modal-settings" role="dialog" aria-modal="true" aria-labelledby="modal-settings-title" hidden>
+        <div class="modal-dialog modal-md">
+            <div class="modal-header">
+                <h2 id="modal-settings-title">Settings &amp; Local Cache</h2>
+                <button type="button" class="modal-close" data-close-modal="modal-settings" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <strong>Local Card Art Cache (YGOPRODeck)</strong>
+                        <p class="muted-note">Procedural SVG/CSS card frames are used by default with zero external image requests. Enable this to opt into rate-limited, same-origin local disk caching via the Python backend.</p>
+                        <p class="muted-note" id="art-dir-note" hidden></p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-art-cache">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <strong>Local Card Effect Text Cache</strong>
+                        <p class="muted-note">The committed <code>cards_db.json</code> stores factual stats and ID mappings only. Optionally sync full card text to your local <code>cache/</code> folder.</p>
+                        <p class="muted-note" id="text-cache-status">Cached locally: 0 descriptions</p>
+                    </div>
+                    <button type="button" class="btn btn-save btn-xs" id="btn-sync-descriptions">Sync Card Effect Text Locally</button>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <strong>Auto-Unlock 3&times; Cards in Trunk on Save</strong>
+                        <p class="muted-note">Ensures any card added to your deck is unlocked in your PSP trunk inventory while preserving players who already own more than 3 copies.</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-auto-unlock" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="shortcuts-box">
+                    <h4>Keyboard Shortcuts</h4>
+                    <div class="shortcuts-grid">
+                        <div><kbd>Ctrl</kbd> + <kbd>S</kbd> <span>Save deck</span></div>
+                        <div><kbd>Ctrl</kbd> + <kbd>Z</kbd> <span>Undo</span></div>
+                        <div><kbd>Ctrl</kbd> + <kbd>Y</kbd> <span>Redo</span></div>
+                        <div><kbd>/</kbd> <span>Focus card search</span></div>
+                        <div><kbd>Esc</kbd> <span>Close modal / unpin card</span></div>
+                        <div><kbd>Right-click</kbd> <span>Remove deck card</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Reusable Confirmation Dialog -->
+    <div class="modal-backdrop" id="modal-confirm" role="dialog" aria-modal="true" aria-labelledby="modal-confirm-title" hidden>
+        <div class="modal-dialog modal-sm">
+            <div class="modal-header">
+                <h2 id="modal-confirm-title">Confirm Action</h2>
+                <button type="button" class="modal-close" data-close-modal="modal-confirm" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modal-confirm-message"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" id="btn-confirm-cancel">Cancel</button>
+                <button type="button" class="btn btn-clear" id="btn-confirm-ok">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
